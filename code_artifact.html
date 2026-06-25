@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>귀여운 데스크톱 대시보드</title>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* 투명도 조절을 위한 CSS 변수 */
+            --card-bg: rgba(255, 255, 255, 0.85); 
+            --main-color: #7b61ff;
+            --btn-hover: #5a42d1;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            font-family: 'Jua', sans-serif;
+            background: linear-gradient(135deg, #e6e6fa, #fff0f5);
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        /* 메인 대시보드 그리드 레이아웃 */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: auto 1fr;
+            column-gap: 20px;
+            row-gap: 160px; /* 동물 친구들이 보이도록 상/하단 카드 세로 간격 대폭 확대 */
+            padding: 30px;
+            padding-bottom: 80px; /* 하단 카드 밑 여백 추가 */
+            min-height: 100vh; /* 간격 확보를 위해 스크롤 허용 */
+            box-sizing: border-box;
+            z-index: 10;
+            position: relative;
+        }
+
+        /* 카드 공통 스타일 */
+        .card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            transition: background 0.3s;
+        }
+
+        /* 영역 배치 */
+        .clock-card { grid-column: 1; grid-row: 1; justify-content: center; align-items: center; text-align: center; }
+        .weather-card { grid-column: 2 / 4; grid-row: 1; }
+        .meals-card { grid-column: 1; grid-row: 2; overflow-y: auto;}
+        .schedule-card { grid-column: 2; grid-row: 2; justify-content: center; align-items: center; }
+        .todo-card { grid-column: 3; grid-row: 2; display: flex; flex-direction: column; }
+
+        /* 시계 스타일 */
+        .date-text { font-size: 1.2rem; color: #555; }
+        .ampm-text { font-size: 2rem; color: var(--main-color); margin-top: 5px; }
+        .time-text { font-size: 3rem; color: var(--main-color); letter-spacing: 1px; line-height: 1.1; }
+
+        /* 날씨 및 상단 영역 스타일 */
+        .weather-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #ddd; padding-bottom: 10px; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;}
+        .weather-header h2 { margin: 0; font-size: 1.3rem; }
+        .opacity-control { display: flex; align-items: center; gap: 10px; font-size: 1rem; }
+        
+        .weather-content { display: flex; gap: 15px; flex-wrap: wrap;}
+        .weather-box, .dust-box { background: rgba(255, 255, 255, 0.5); padding: 10px 15px; border-radius: 16px; flex: 1; min-width: 180px;}
+        .weather-info { font-size: 1.6rem; font-weight: bold; margin: 5px 0; }
+        .dust-good { color: #0078ff; }
+        .dust-bad { color: #ff4040; }
+        .weather-footer { margin-top: 10px; text-align: center; font-size: 1.1rem; background: #fffde7; padding: 8px; border-radius: 12px; }
+
+        /* 급식 스타일 */
+        .card-title { font-size: 1.6rem; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; margin-bottom: 15px; width: 100%; text-align: left; }
+        .meal-date { color: var(--main-color); margin-bottom: 10px; font-size: 1.3rem; }
+        
+        /* 급식 탭 스타일 */
+        .meal-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; width: 100%; }
+        .meal-tab { padding: 8px 10px; border-radius: 12px; border: none; font-size: 1.2rem; font-family: 'Jua', sans-serif; cursor: pointer; background: #eee; color: #555; transition: 0.2s; }
+        .meal-tab.active { background: var(--main-color); color: white; transform: scale(1.05); box-shadow: 0 4px 10px rgba(123, 97, 255, 0.3); }
+        
+        .meal-list { list-style: none; padding: 0; margin: 0; font-size: 1.3rem; line-height: 1.6; }
+
+        /* 일과운영(시간표) 스타일 */
+        .schedule-card { text-align: center; justify-content: flex-start; }
+        .schedule-display { width: 100%; display: flex; flex-direction: column; align-items: center; margin-top: auto; margin-bottom: auto;}
+        .current-period { font-size: 3.5rem; color: var(--main-color); margin-bottom: 5px; line-height: 1.2; word-break: keep-all; }
+        .period-time { font-size: 1.5rem; color: #777; margin-bottom: 20px; }
+        .progress-bar { width: 90%; height: 24px; background: #e2e8f0; border-radius: 12px; overflow: hidden; position: relative; margin-bottom: 10px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #34e89e, #0f3443); width: 0%; transition: width 1s linear; border-radius: 12px; }
+        .time-left { font-size: 1.4rem; color: #333; font-weight: bold; }
+
+        /* 할 일 스타일 */
+        .todo-input-wrap { display: flex; gap: 10px; margin-bottom: 15px; }
+        .todo-input { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 1.3rem; font-family: 'Jua', sans-serif; background: transparent; min-width: 0;}
+        .btn-add { background-color: #2ed573; padding: 12px 20px; font-size: 1.2rem; border: none; border-radius: 12px; cursor: pointer; color: white;}
+        .todo-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; max-height: 400px;}
+        .todo-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 10px; border-bottom: 1px dashed #eee; font-size: 1.4rem; }
+        .todo-item label { display: flex; align-items: center; flex: 1; cursor: pointer; word-break: break-all;}
+        .todo-item input[type="checkbox"] { transform: scale(1.5); margin-right: 10px; accent-color: var(--main-color); cursor: pointer; flex-shrink: 0;}
+        .todo-item.completed span { text-decoration: line-through; color: #aaa; }
+        .btn-delete { background: none; border: none; color: #ff6b81; font-size: 1.2rem; cursor: pointer; transition: 0.2s; }
+        .btn-delete:hover { transform: scale(1.2); }
+
+        /* 배경 애니메이션 캐릭터 */
+        .characters {
+            position: fixed;
+            top: 340px; /* 넓힌 카드 사이의 빈 공간 높이에 정확히 맞춤 */
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 50px; 
+            font-size: 3.5rem; /* 크기를 조금 줄임 */
+            z-index: 1;
+            opacity: 0.9; /* 틈새에서 확실히 보이도록 불투명도 증가 */
+            animation: moveCharacters 12s ease-in-out infinite alternate;
+            pointer-events: none;
+            transform: translateY(-50%);
+        }
+
+        @keyframes moveCharacters {
+            0% { transform: translate(-40px, -50%); }
+            100% { transform: translate(40px, -50%); }
+        }
+
+        /* 반응형 디자인 */
+        @media (max-width: 1024px) {
+            .dashboard {
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: auto auto auto;
+                height: auto; min-height: calc(100vh - 120px);
+                padding-bottom: 120px;
+                row-gap: 20px; /* 화면이 좁아지면(태블릿 등) 간격 원상복구 */
+            }
+            .weather-card { grid-column: 1 / 3; grid-row: 2; }
+            .meals-card { grid-column: 1; grid-row: 3; }
+            .schedule-card { grid-column: 2; grid-row: 1; }
+            .todo-card { grid-column: 2; grid-row: 3; }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+                display: flex; flex-direction: column;
+                height: auto;
+            }
+            .time-text { font-size: 3.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="characters">
+        <span>🐶</span><span>🐱</span><span>🐰</span><span>🐻</span><span>🐼</span><span>🐹</span>
+    </div>
+
+    <div class="dashboard">
+        <div class="card clock-card">
+            <div class="date-text" id="date">로딩중...</div>
+            <div class="ampm-text" id="ampm">--</div>
+            <div class="time-text" id="time">--:--:--</div>
+        </div>
+
+        <div class="card weather-card">
+            <div class="weather-header">
+                <h2>🌤️ 부산광역시 오늘의 날씨 & 미세먼지</h2>
+                <div class="opacity-control">
+                    투명도 <input type="range" id="opacity-slider" min="0.2" max="1" step="0.1" value="0.85">
+                </div>
+            </div>
+            <div class="weather-content">
+                <div class="weather-box">
+                    <div>현재 날씨</div>
+                    <div class="weather-info"><span id="temp">--</span>°C <span id="weather-desc">로딩중...</span></div>
+                </div>
+                <div class="weather-box">
+                    <div>현재 미세먼지 (PM10)</div>
+                    <div class="weather-info"><span id="dust-value">--</span> μg/m³ (<span id="dust-status">로딩중...</span>)</div>
+                </div>
+            </div>
+            <div class="weather-footer" id="weather-comparison">
+                💡 날씨와 미세먼지 정보를 불러오는 중입니다...
+            </div>
+        </div>
+
+        <div class="card meals-card">
+            <h2 class="card-title">🍱 오늘의 식단</h2>
+            <div class="meal-tabs">
+                <button class="meal-tab" id="tab-조식" onclick="showMeal('조식')">조식</button>
+                <button class="meal-tab active" id="tab-중식" onclick="showMeal('중식')">중식</button>
+                <button class="meal-tab" id="tab-석식" onclick="showMeal('석식')">석식</button>
+            </div>
+            <div class="meal-date" id="meal-date">로딩중...</div>
+            <ul class="meal-list" id="meal-list">
+                <li>데이터를 불러오는 중...</li>
+            </ul>
+        </div>
+
+        <div class="card schedule-card">
+            <h2 class="card-title">🏫 일과운영</h2>
+            
+            <div class="schedule-display">
+                <div class="current-period" id="current-period">상태 확인 중</div>
+                <div class="period-time" id="period-time">00:00 ~ 00:00</div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="time-left" id="time-left">--분 남음</div>
+            </div>
+        </div>
+
+        <div class="card todo-card">
+            <h2 class="card-title">📝 오늘의 할 일</h2>
+            <div class="todo-input-wrap">
+                <input type="text" id="todo-input" class="todo-input" placeholder="할 일을 적어보세요!" onkeypress="handleTodoKeyPress(event)">
+                <button class="btn btn-add" onclick="addTodo()">➕</button>
+            </div>
+            <ul class="todo-list" id="todo-list">
+                </ul>
+        </div>
+    </div>
+
+    <script>
+        /* ==============================
+           1. 투명도 조절 기능
+        ============================== */
+        const slider = document.getElementById('opacity-slider');
+        slider.addEventListener('input', function() {
+            document.documentElement.style.setProperty('--card-bg', `rgba(255, 255, 255, ${this.value})`);
+        });
+
+        /* ==============================
+           2. 시계 기능 및 전체 시간 동기화
+        ============================== */
+        const days = ['일', '월', '화', '수', '목', '금', '토'];
+        function updateClock() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const date = String(now.getDate()).padStart(2, '0');
+            const day = days[now.getDay()];
+            
+            let hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            const ampm = hours >= 12 ? '오후' : '오전';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // 0시는 12시로 표시
+            hours = String(hours).padStart(2, '0');
+
+            document.getElementById('date').innerText = `${year}년 ${month}월 ${date}일 (${day}요일)`;
+            document.getElementById('ampm').innerText = ampm;
+            document.getElementById('time').innerText = `${hours}:${minutes}:${seconds}`;
+
+            // 매 초마다 일과운영(시간표) 현황도 업데이트
+            updateSchedule();
+        }
+        setInterval(updateClock, 1000);
+
+        /* ==============================
+           3. 나이스 급식 API (조식, 중식, 석식 탭 기능)
+        ============================== */
+        let currentMeals = { '조식': [], '중식': [], '석식': [] };
+
+        async function loadMealData() {
+            const officeCode = 'C10';  // 부산광역시교육청
+            const schoolCode = '7150397'; // 해당 고등학교 코드
+            
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const date = String(now.getDate()).padStart(2, '0');
+            const todayStr = `${year}${month}${date}`; 
+
+            const apiUrl = `https://open.neis.go.kr/hub/mealServiceDietInfo?Type=json&ATPT_OFCDC_SC_CODE=${officeCode}&SD_SCHUL_CODE=${schoolCode}&MLSV_YMD=${todayStr}`;
+            const mealListEl = document.getElementById('meal-list');
+            mealListEl.innerHTML = '<li style="color:#888;">급식 정보를 불러오는 중... ⏳</li>';
+
+            // 초기화
+            currentMeals = { '조식': [], '중식': [], '석식': [] };
+
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+
+                if (data.mealServiceDietInfo && data.mealServiceDietInfo[1].row) {
+                    const rows = data.mealServiceDietInfo[1].row;
+                    
+                    rows.forEach(row => {
+                        const mealType = row.MMEAL_SC_NM; // 조식, 중식, 석식 등
+                        const mealString = row.DDISH_NM;
+                        // '부경'이라는 단어와 숫자, 특수기호 제거
+                        const meals = mealString.replace(/[0-9\.*()]/g, '').replace(/부경/g, '').split('<br/>').filter(m => m.trim() !== '');
+                        
+                        if (mealType.includes('조식')) currentMeals['조식'] = meals;
+                        else if (mealType.includes('중식')) currentMeals['중식'] = meals;
+                        else if (mealType.includes('석식')) currentMeals['석식'] = meals;
+                    });
+                    
+                    // 기본으로 '중식' 메뉴 보여주기
+                    showMeal('중식');
+                } else {
+                    mealListEl.innerHTML = '<li style="color:#aaa; margin-top:20px;">오늘은 식단 정보가 없어요! 😅</li>';
+                }
+            } catch (error) {
+                mealListEl.innerHTML = '<li style="color:#ff6b81; margin-top:20px;">급식 정보를 가져오는데 실패했어요. 😢</li>';
+            }
+            
+            document.getElementById('meal-date').innerText = `${year}년 ${month}월 ${date}일 식단`;
+        }
+
+        // 탭 버튼 클릭 시 식단 정보 업데이트
+        function showMeal(type) {
+            // 버튼 활성화 상태 변경
+            document.querySelectorAll('.meal-tab').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById(`tab-${type}`);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            const mealListEl = document.getElementById('meal-list');
+            mealListEl.innerHTML = '';
+            
+            const meals = currentMeals[type];
+            if (meals && meals.length > 0) {
+                meals.forEach(meal => {
+                    const li = document.createElement('li');
+                    li.innerText = `• ${meal.trim()}`;
+                    mealListEl.appendChild(li);
+                });
+            } else {
+                mealListEl.innerHTML = `<li style="color:#aaa; margin-top:20px;">${type} 정보가 없어요! 😅</li>`;
+            }
+        }
+
+        loadMealData();
+
+        /* ==============================
+           4. 일과운영 (고등학교용 - 16:20 종료 기준)
+        ============================== */
+        function timeToMins(timeStr) {
+            const parts = timeStr.split(':');
+            return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        }
+
+        function updateSchedule() {
+            const now = new Date();
+            const dayOfWeek = now.getDay(); // 0:일, 1:월, 2:화, 3:수, 4:목, 5:금, 6:토
+            const currentMins = now.getHours() * 60 + now.getMinutes();
+            const currentSecs = now.getSeconds();
+            const absoluteSecs = currentMins * 60 + currentSecs;
+
+            const periodEl = document.getElementById('current-period');
+            const timeEl = document.getElementById('period-time');
+            const progressFill = document.getElementById('progress-fill');
+            const timeLeftEl = document.getElementById('time-left');
+
+            // 주말 체크 (토, 일요일)
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+                periodEl.innerHTML = "신나는 주말 🎈";
+                timeEl.innerText = "오늘은 학교 안 가는 날!";
+                progressFill.style.width = "100%";
+                timeLeftEl.innerText = "휴식 중";
+                return;
+            }
+
+            // 요일별 시간표 구성 (16:20 종료 기준)
+            let dailyTimetable = [];
+            
+            if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+                // 월 ~ 목요일 시간표
+                dailyTimetable = [
+                    { name: '등교 전', start: '00:00', end: '08:20' },
+                    { name: '조례', start: '08:20', end: '08:40' },
+                    { name: '1교시', start: '08:40', end: '09:30' },
+                    { name: '쉬는시간', start: '09:30', end: '09:40' },
+                    { name: '2교시', start: '09:40', end: '10:30' },
+                    { name: '쉬는시간', start: '10:30', end: '10:40' },
+                    { name: '3교시', start: '10:40', end: '11:30' },
+                    { name: '쉬는시간', start: '11:30', end: '11:40' },
+                    { name: '4교시', start: '11:40', end: '12:30' },
+                    { name: '중식', start: '12:30', end: '13:20' },
+                    { name: '5교시', start: '13:20', end: '14:10' },
+                    { name: '청소', start: '14:10', end: '14:30' },
+                    { name: '6교시', start: '14:30', end: '15:20' },
+                    { name: '쉬는시간', start: '15:20', end: '15:30' },
+                    { name: '7교시', start: '15:30', end: '16:20' },
+                    { name: '일과 종료 🌙', start: '16:20', end: '23:59' }
+                ];
+            } else if (dayOfWeek === 5) {
+                // 금요일 시간표
+                dailyTimetable = [
+                    { name: '등교 전', start: '00:00', end: '08:20' },
+                    { name: '조례', start: '08:20', end: '08:40' },
+                    { name: '1교시', start: '08:40', end: '09:30' },
+                    { name: '쉬는시간', start: '09:30', end: '09:40' },
+                    { name: '2교시', start: '09:40', end: '10:30' },
+                    { name: '쉬는시간', start: '10:30', end: '10:40' },
+                    { name: '3교시', start: '10:40', end: '11:30' },
+                    { name: '쉬는시간', start: '11:30', end: '11:40' },
+                    { name: '4교시', start: '11:40', end: '12:30' },
+                    { name: '중식', start: '12:30', end: '13:20' },
+                    { name: '창의적 체험활동', start: '13:20', end: '14:50' },
+                    { name: '쉬는시간 및 청소', start: '14:50', end: '15:10' },
+                    { name: '다모임 전문적<br>학습공동체', start: '15:10', end: '16:20' },
+                    { name: '일과 종료 🌙', start: '16:20', end: '23:59' }
+                ];
+            }
+
+            // 현재 시간에 맞는 일정 찾기
+            const currentPeriod = dailyTimetable.find(p => {
+                const startMins = timeToMins(p.start);
+                const endMins = timeToMins(p.end);
+                return currentMins >= startMins && currentMins < endMins;
+            });
+
+            if (currentPeriod) {
+                periodEl.innerHTML = currentPeriod.name;
+                timeEl.innerText = `${currentPeriod.start} ~ ${currentPeriod.end}`;
+                
+                const startSecs = timeToMins(currentPeriod.start) * 60;
+                const endSecs = timeToMins(currentPeriod.end) * 60;
+                const totalSecs = endSecs - startSecs;
+                const passedSecs = absoluteSecs - startSecs;
+                
+                let percent = (passedSecs / totalSecs) * 100;
+                if (percent < 0) percent = 0;
+                if (percent > 100) percent = 100;
+                
+                // 등교전, 일과종료일 때는 프로그레스 바를 100%로 채움
+                if(currentPeriod.name.includes("등교 전") || currentPeriod.name.includes("종료")){
+                    progressFill.style.width = "100%";
+                    timeLeftEl.innerText = currentPeriod.name.includes("등교 전") ? "등교 준비 중 🎒" : "오늘 하루도 수고했어요! 👏";
+                } else {
+                    progressFill.style.width = `${percent}%`;
+                    const remainingMins = Math.ceil((endSecs - absoluteSecs) / 60);
+                    timeLeftEl.innerText = `${remainingMins}분 남음`;
+                }
+            } else {
+                periodEl.innerHTML = "일정 없음";
+                timeEl.innerText = "-";
+                progressFill.style.width = "0%";
+                timeLeftEl.innerText = "-";
+            }
+        }
+        updateClock(); 
+
+        /* ==============================
+           5. 오늘의 할 일 (localStorage 연동)
+        ============================== */
+        let todos = JSON.parse(localStorage.getItem('dashboardTodos_webapp_hs')) || [];
+
+        function saveTodos() {
+            localStorage.setItem('dashboardTodos_webapp_hs', JSON.stringify(todos));
+        }
+
+        function renderTodos() {
+            const list = document.getElementById('todo-list');
+            list.innerHTML = '';
+            
+            if(todos.length === 0) {
+                list.innerHTML = '<li style="text-align:center; color:#aaa; margin-top:20px;">할 일을 추가해보세요!</li>';
+                return;
+            }
+
+            todos.forEach((todo, index) => {
+                const li = document.createElement('li');
+                li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
+                
+                li.innerHTML = `
+                    <label>
+                        <input type="checkbox" onchange="toggleTodo(${index})" ${todo.completed ? 'checked' : ''}>
+                        <span>${todo.text}</span>
+                    </label>
+                    <button class="btn-delete" onclick="deleteTodo(${index})" title="삭제">❌</button>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function addTodo() {
+            const input = document.getElementById('todo-input');
+            const text = input.value.trim();
+            if (text !== '') {
+                todos.push({ text: text, completed: false });
+                saveTodos();
+                renderTodos();
+                input.value = '';
+                const list = document.getElementById('todo-list');
+                list.scrollTop = list.scrollHeight;
+            }
+        }
+
+        function handleTodoKeyPress(e) {
+            if (e.key === 'Enter') {
+                addTodo();
+            }
+        }
+
+        function toggleTodo(index) {
+            todos[index].completed = !todos[index].completed;
+            saveTodos();
+            renderTodos();
+        }
+
+        function deleteTodo(index) {
+            todos.splice(index, 1);
+            saveTodos();
+            renderTodos();
+        }
+
+        renderTodos();
+
+        /* ==============================
+           6. 날씨 & 미세먼지 API 연동 (부산광역시 고정)
+        ============================== */
+        async function loadWeatherData(lat = 35.1796, lon = 129.0756) { // 기본값: 부산광역시청 좌표
+            try {
+                // 1. 날씨 데이터
+                const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul`;
+                const weatherRes = await fetch(weatherUrl);
+                const weatherData = await weatherRes.json();
+
+                const currentTemp = weatherData.current.temperature_2m;
+                const code = weatherData.current.weather_code;
+                
+                let weatherDesc = '맑음 ☀️';
+                if ([1,2,3].includes(code)) weatherDesc = '구름/흐림 ⛅';
+                else if ([45,48].includes(code)) weatherDesc = '안개 🌫️';
+                else if ([51,53,55,61,63,65,80,81,82].includes(code)) weatherDesc = '비 ☔';
+                else if ([71,73,75,85,86].includes(code)) weatherDesc = '눈 ❄️';
+                else if ([95,96,99].includes(code)) weatherDesc = '뇌우 ⛈️';
+
+                document.getElementById('temp').innerText = currentTemp.toFixed(1);
+                document.getElementById('weather-desc').innerText = weatherDesc;
+
+                const todayMax = weatherData.daily.temperature_2m_max[0];
+                const tomorrowMax = weatherData.daily.temperature_2m_max[1];
+                const diff = (tomorrowMax - todayMax).toFixed(1);
+                
+                const comparisonEl = document.getElementById('weather-comparison');
+                if (diff > 0) {
+                    comparisonEl.innerHTML = `💡 내일 최고기온은 오늘보다 <strong style="color:#ff6b81;">${Math.abs(diff)}°C 높습니다.</strong> 🥵`;
+                } else if (diff < 0) {
+                    comparisonEl.innerHTML = `💡 내일 최고기온은 오늘보다 <strong style="color:#0078ff;">${Math.abs(diff)}°C 낮습니다.</strong> 🥶`;
+                } else {
+                    comparisonEl.innerHTML = `💡 내일 최고기온은 오늘과 <strong style="color:#2ed573;">비슷합니다.</strong> 😌`;
+                }
+
+                // 2. 미세먼지(PM10) 데이터
+                const dustUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=pm10&timezone=Asia%2FSeoul`;
+                const dustRes = await fetch(dustUrl);
+                const dustData = await dustRes.json();
+
+                const pm10 = dustData.current.pm10;
+                document.getElementById('dust-value').innerText = pm10;
+                
+                const dustStatusEl = document.getElementById('dust-status');
+                if (pm10 <= 30) {
+                    dustStatusEl.innerText = "좋음 🔵";
+                    dustStatusEl.style.color = "#0078ff";
+                } else if (pm10 <= 80) {
+                    dustStatusEl.innerText = "보통 🟢";
+                    dustStatusEl.style.color = "#2ed573";
+                } else if (pm10 <= 150) {
+                    dustStatusEl.innerText = "나쁨 🟠";
+                    dustStatusEl.style.color = "#ff9f43";
+                } else {
+                    dustStatusEl.innerText = "매우나쁨 🔴";
+                    dustStatusEl.style.color = "#ff4040";
+                }
+
+            } catch (error) {
+                console.error("날씨/미세먼지 API 오류:", error);
+                document.getElementById('weather-desc').innerText = "정보 없음";
+                document.getElementById('weather-comparison').innerText = "💡 날씨 정보를 불러오지 못했습니다.";
+            }
+        }
+
+        function initWeather() {
+            // 사용자 위치 추적 없이 무조건 부산광역시 기준으로 호출합니다.
+            loadWeatherData(35.1796, 129.0756);
+        }
+        initWeather();
+
+    </script>
+</body>
+</html>
