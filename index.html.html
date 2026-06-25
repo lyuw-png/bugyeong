@@ -29,9 +29,11 @@
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             grid-template-rows: auto 1fr;
-            gap: 20px;
+            column-gap: 20px;
+            row-gap: 160px; /* 동물 친구들이 보이도록 상/하단 카드 세로 간격 대폭 확대 */
             padding: 30px;
-            height: calc(100vh - 120px);
+            padding-bottom: 80px; /* 하단 카드 밑 여백 추가 */
+            min-height: 100vh; /* 간격 확보를 위해 스크롤 허용 */
             box-sizing: border-box;
             z-index: 10;
             position: relative;
@@ -108,20 +110,23 @@
         /* 배경 애니메이션 캐릭터 */
         .characters {
             position: fixed;
-            bottom: 10px;
+            top: 340px; /* 넓힌 카드 사이의 빈 공간 높이에 정확히 맞춤 */
+            left: 0;
             width: 100%;
             display: flex;
-            justify-content: space-around;
-            font-size: 2.5rem;
+            justify-content: center;
+            gap: 50px; 
+            font-size: 3.5rem; /* 크기를 조금 줄임 */
             z-index: 1;
-            opacity: 0.7;
-            animation: moveCharacters 10s ease-in-out infinite alternate;
+            opacity: 0.9; /* 틈새에서 확실히 보이도록 불투명도 증가 */
+            animation: moveCharacters 12s ease-in-out infinite alternate;
             pointer-events: none;
+            transform: translateY(-50%);
         }
 
         @keyframes moveCharacters {
-            0% { transform: translateX(-20px); }
-            100% { transform: translateX(20px); }
+            0% { transform: translate(-40px, -50%); }
+            100% { transform: translate(40px, -50%); }
         }
 
         /* 반응형 디자인 */
@@ -131,6 +136,7 @@
                 grid-template-rows: auto auto auto;
                 height: auto; min-height: calc(100vh - 120px);
                 padding-bottom: 120px;
+                row-gap: 20px; /* 화면이 좁아지면(태블릿 등) 간격 원상복구 */
             }
             .weather-card { grid-column: 1 / 3; grid-row: 2; }
             .meals-card { grid-column: 1; grid-row: 3; }
